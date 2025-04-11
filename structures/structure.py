@@ -10,17 +10,17 @@ def get_nonzero_entities(array: np.ndarray) -> List[Tuple[int, int]]:
     return {e:array[e] for e in np.ndindex(array.shape) if array[e] != 0} 
 
 class Structure:
-    def __init__(self, initial_values=None):
-        """
-        To gather:
-            - the entities, including their initial values,
-            - the connections (a function to get the neighbors of entities)
+    """
+    To gather:
+        - the entities, including their initial values,
+        - the connections (a function to get the neighbors of entities)
 
-        Currently, the entities dict (stored in self.entities) stores every entity as key, and the values
-            are every timestep t0, t1, t2, ... values
-        There is consideration to rather store the nonzero values at each time step instead.
-        #TODO: t "time slices": should be a dict of times t0, t1, t2, ... storing the nonzero values
-        """
+    Currently, the entities dict (stored in self.entities) stores every entity as key, and the values
+        are every timestep t0, t1, t2, ... values
+    There is consideration to rather store the nonzero values at each time step instead.
+    #TODO: t "time slices": should be a dict of times t0, t1, t2, ... storing the nonzero values
+    """
+    def __init__(self, initial_values=None):
         self.entities = self.define_entities()
         self.connections = self.define_connections()
         raise NotImplementedError
@@ -41,7 +41,8 @@ class Structure:
 class Grid(Structure):
     """
     Grid structure, defined width, height, initial values, and connections
-        (depending on periodic boundary and diagonal neighbors)."""
+        (depending on periodic boundary and diagonal neighbors).
+    """
     def __init__(self, initial_values: np.ndarray | Dict[Tuple[int, int], Any] = None,
                  width: int = None, height: int = None,
                  periodic_boundary: bool = True, diagonal_neighbours: bool = True):
@@ -133,8 +134,6 @@ class Grid(Structure):
 
         return connections
 
-
-    
     def get_time_slice(self, T)->np.ndarray:
         pass
 
@@ -144,11 +143,25 @@ class Grid(Structure):
 
 class Graph(Structure):
     def __init__(self, G: nx.Graph,
-                 initial_values=None):
+                 initial_values=None,
+                 time_step=0,
+                 property_name="t_",
+                 ):
         """
         Initialize a graph structure.
         """
-        pass
+        initial_property_name = property_name + str(time_step)
+        if initial_values:
+            if not isinstance(initial_values, dict):
+                raise ValueError(f"Initial values must be a dictionary of node: value pairs, not {type(initial_values)}")
+            for node, value in initial_values.items():
+                if node not in G.nodes:
+                    raise ValueError(f"Node {node} is not in the graph.")
+                G.nodes[node][initial_property_name] = value
+        
+        for node in G.nodes:
+            if initial_property_name not in G.nodes[node]:
+                G.nodes[node][initial_property_name] = 0
 
-    def get_connections(self, x, y):
-        return self.edges.get((x,y), [])
+        self.entities = G.nodes(data=True)
+        self.connections = G.edges(data=True)
