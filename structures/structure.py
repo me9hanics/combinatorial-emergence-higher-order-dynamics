@@ -1,13 +1,6 @@
 import numpy as np
 import networkx as nx
-from typing import List, Tuple, Dict, Any
-
-def get_nonzero_entities(array: np.ndarray) -> List[Tuple[int, int]]:
-    """
-    Returns the entities with non-zero value as a dict.
-    """
-    #TODO: Generalize, put in Structure class
-    return {e:array[e] for e in np.ndindex(array.shape) if array[e] != 0} 
+from typing import List, Tuple, Dict, Generator, Any
 
 class Structure:
     """
@@ -20,15 +13,21 @@ class Structure:
     There is consideration to rather store the nonzero values at each time step instead.
     #TODO: t "time slices": should be a dict of times t0, t1, t2, ... storing the nonzero values
     """
-    def __init__(self, initial_values=None):
-        self.entities = self.define_entities()
-        self.connections = self.define_connections()
-        raise NotImplementedError
+    def __init__(self, initial_values=None,
+                 time_step: int = 0, key_name: str = "t_",):
+        self.entities = self.initialize_entities()
+        self.connections = self.initialize_connections()
+
+        initial_key_name = key_name + str(time_step)
+        self.initial_time_step = time_step
+        self.initial_key_name = initial_key_name
+        if initial_values:
+            raise NotImplementedError()
     
-    def define_entities(self):
+    def initialize_entities(self):
         raise NotImplementedError
 
-    def define_connections(self):
+    def initialize_connections(self):
         raise NotImplementedError
     
     def get_entities(self):
@@ -37,6 +36,57 @@ class Structure:
     def get_connections(self):
         return self.connections
     
+    def get_nonzero_entities(self, key_name: str = "t_",
+                             t:int = None, initial_time_step: int = None,
+                             verbose: bool = True): #-> Generator[Tuple[Any, Any], None, None]: 
+        """
+        Returns the entities with non-zero value at timestep t.
+
+        If setting `key_name` directly to the key which stores the respective values,
+            then `t` and `initial_time_step` shall be None.
+        Otherwise, `t` is the timestep to check for non-zero values counting from `initial_time_step`,
+            and the property is assumed to be `key_name` + str(t+initial_time_step).
+        """
+        if t is None and initial_time_step is None:
+            key_name = key_name
+        if isinstance(t, int):
+            if not isinstance(initial_time_step, int):
+                initial_time_step = 0
+            key_name = key_name + str(t+initial_time_step)
+
+        nonzero_entities = {}
+        for entity, values in self.entities.items():
+            if key_name not in values:
+                if verbose:
+                    print(f"Entity {entity} does not have key {key_name} property.")
+            elif values[key_name]:
+                nonzero_entities[entity] = values[key_name]
+                #TODO consider using yield: yield entity, values[key_name]
+        return nonzero_entities
+
+    def get_entity_connections(self, entity):
+        """
+        Returns the connections of the given entity.
+        """
+        if entity not in self.entities.keys():
+            raise ValueError(f"Entity {entity} is not in the structure.")
+        connections = []
+        for connection in self.connections:
+            if entity in connection:
+                connections.append(connection)
+        return connections
+    
+    def get_entities_connections_LUT(self):
+        """
+        Returns a lookup table of the connections of each entity.
+        """
+        connections_LUT = {}
+        for connection in self.connections:
+            for entity in connection:
+                if entity not in connections_LUT:
+                    connections_LUT[entity] = []
+                connections_LUT[entity].append(connection)
+        return connections_LUT
 
 class Grid(Structure):
     """
@@ -45,12 +95,14 @@ class Grid(Structure):
     """
     def __init__(self, initial_values: np.ndarray | Dict[Tuple[int, int], Any] = None,
                  width: int = None, height: int = None,
-                 periodic_boundary: bool = True, diagonal_neighbours: bool = True):
+                 periodic_boundary: bool = True, diagonal_neighbours: bool = True,
+                 time_step: int = 0, key_name: str = "t_"):
         """
         Initialize a grid structure.
         TODO: left_top_corner
         """
         
+        #TODO put into the respective function
         if isinstance(initial_values, np.ndarray):
             width, height = initial_values.shape
             #left_top_corner = (0, 0)
@@ -76,9 +128,13 @@ class Grid(Structure):
         else:
             raise ValueError(f"Current implementation: initial_values must be numpy array or dict, not {type(initial_values)}")
         
-        entities = self.define_entities(initial_values, width, height)
-        connections = self.define_connections(width, height, periodic_boundary, diagonal_neighbours)
+        initial_key_name = key_name + str(time_step)
+        entities = self.initialize_entities(initial_values, width, height, initial_key_name)
+        connections = self.initialize_connections(width, height, periodic_boundary, diagonal_neighbours)
 
+        self.initial_key_name = initial_key_name
+        self.initial_time_step = time_step
+        self.current_time_step = time_step
         self.entities = entities
         self.connections = connections
         self.width = width
@@ -86,22 +142,21 @@ class Grid(Structure):
         self.periodic_boundary = periodic_boundary
         self.diagonal_neighbours = diagonal_neighbours
 
-
-    def define_entities(self, initial_values, width, height):
-        entities = {(x,y):{"t0":0} for x in range(width) for y in range(height)}
+    def initialize_entities(self, initial_values, width, height, initial_key_name="t_0"):
+        entities = {(x,y):{initial_key_name:0} for x in range(width) for y in range(height)}
         if isinstance(initial_values, dict):
             for (x,y), value in initial_values.items():
                 if (x,y) in entities:
-                    initial_values[(x,y)]["t0"] = value
+                    initial_values[(x,y)][initial_key_name] = value
                 else:
                     raise ValueError(f"Initial value for ({x},{y}) is not in the grid.")
         elif isinstance(initial_values, np.ndarray):
             for x in range(width):
                 for y in range(height):
-                    entities[(x,y)]["t0"] = initial_values[x,y]
+                    entities[(x,y)][initial_key_name] = initial_values[x,y]
         return entities
     
-    def define_connections(self, width, height, periodic_boundary, diagonal_neighbours):
+    def initialize_connections(self, width, height, periodic_boundary, diagonal_neighbours):
         """
         Define the connections of the grid structure.
 
@@ -138,30 +193,35 @@ class Grid(Structure):
         pass
 
 
-
-
-
 class Graph(Structure):
     def __init__(self, G: nx.Graph,
                  initial_values=None,
-                 time_step=0,
-                 property_name="t_",
+                 time_step: int = 0, key_name: str = "t_",
                  ):
         """
         Initialize a graph structure.
         """
-        initial_property_name = property_name + str(time_step)
+        initial_key_name = key_name + str(time_step)
+        G = self.initialize_entities(G, initial_values, initial_key_name)
+
+        self.initial_time_step = time_step
+        self.initial_key_name = initial_key_name
+        self.entities = dict(G.nodes(data=True))
+        self.connections = list(G.edges())
+
+    def initialize_entities(self, G, initial_values, initial_key_name="t_0"):
         if initial_values:
             if not isinstance(initial_values, dict):
                 raise ValueError(f"Initial values must be a dictionary of node: value pairs, not {type(initial_values)}")
             for node, value in initial_values.items():
                 if node not in G.nodes:
                     raise ValueError(f"Node {node} is not in the graph.")
-                G.nodes[node][initial_property_name] = value
+                G.nodes[node][initial_key_name] = value
         
         for node in G.nodes:
-            if initial_property_name not in G.nodes[node]:
-                G.nodes[node][initial_property_name] = 0
-
-        self.entities = G.nodes(data=True)
-        self.connections = G.edges(data=True)
+            if initial_key_name not in G.nodes[node]:
+                G.nodes[node][initial_key_name] = 0
+        return G
+    
+    def initialize_connections(self):
+        pass
