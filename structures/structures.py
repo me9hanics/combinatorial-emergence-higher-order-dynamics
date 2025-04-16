@@ -192,6 +192,12 @@ class Grid(Structure):
     def get_time_slice(self, T)->np.ndarray:
         pass
 
+    def dict_to_array(self, entities: Dict) -> np.ndarray:
+        pass
+
+    def array_to_dict(self, array: np.ndarray) -> Dict:
+        pass
+
 
 class Graph(Structure):
     def __init__(self, G: nx.Graph,
@@ -202,11 +208,11 @@ class Graph(Structure):
         Initialize a graph structure.
         """
         initial_key_name = key_name + str(time_step)
-        G = self.initialize_entities(G, initial_values, initial_key_name)
+        G, entities = self.initialize_entities(G, initial_values, initial_key_name)
 
         self.initial_time_step = time_step
         self.initial_key_name = initial_key_name
-        self.entities = dict(G.nodes(data=True))
+        self.entities = entities
         self.connections = list(G.edges())
 
     def initialize_entities(self, G, initial_values, initial_key_name="t_0"):
@@ -221,7 +227,7 @@ class Graph(Structure):
         for node in G.nodes:
             if initial_key_name not in G.nodes[node]:
                 G.nodes[node][initial_key_name] = 0
-        return G
+        return G, dict(G.nodes()) #data=True
     
     def initialize_connections(self):
         pass
