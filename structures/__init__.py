@@ -1,4 +1,4 @@
-from .structure import Structure, Grid, Graph
+from .structures import Structure, Grid, Graph
 
 __all__ = [
     "Structure",
