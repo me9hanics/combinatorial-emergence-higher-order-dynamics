@@ -76,16 +76,22 @@ class Structure:
                 connections.append(connection)
         return connections
     
-    def get_entities_connections_LUT(self):
+    def get_entities_connections_LUT(self, duplicate_removal = True):
         """
         Returns a lookup table of the connections of each entity.
         """
         connections_LUT = {}
-        for connection in self.connections:
-            for entity in connection:
-                if entity not in connections_LUT:
-                    connections_LUT[entity] = []
-                connections_LUT[entity].append(connection)
+        for entity_A, entity_B in self.connections:
+            if entity_A not in connections_LUT:
+                connections_LUT[entity_A] = []
+            if entity_B not in connections_LUT:
+                connections_LUT[entity_B] = []
+            connections_LUT[entity_A].append(entity_B)
+            connections_LUT[entity_B].append(entity_A)
+        #Remove duplicates (theoretically not needed, but for safety)
+        if duplicate_removal:
+            for entity, connections in connections_LUT.items():
+                connections_LUT[entity] = list(set(connections))
         return connections_LUT
 
 class Grid(Structure):
@@ -168,23 +174,25 @@ class Grid(Structure):
         """
         #TODO remove duplicate connections in case of short side (e.g. 2xN grid)
         connections = []
-        horizontal = [((x, y), (x + 1, y)) for x in range(width - 1) for y in range(height)]
-        vertical = [((x, y), (x, y + 1)) for x in range(width) for y in range(height - 1)]
+        horizontal = [((x, y), (x + 1, y)) for x in range(height - 1) for y in range(width)]
+        vertical = [((x, y), (x, y + 1)) for x in range(height) for y in range(width - 1)]
         
         if periodic_boundary:
-            horizontal += [((width - 1, y), (0, y)) for y in range(height)]
-            vertical += [((x, height - 1), (x, 0)) for x in range(width)]
+            horizontal += [((height - 1, y), (0, y)) for y in range(width)]
+            vertical += [((x, width - 1), (x, 0)) for x in range(height)]
 
         connections += horizontal + vertical
 
         if diagonal_neighbours:
-            diagonal = [((x, y), (x + 1, y + 1)) for x in range(width - 1) for y in range(height - 1)]
-            diagonal += [((x, y), (x + 1, y - 1)) for x in range(width - 1) for y in range(1, height)]
+            diagonal = [((x, y), (x + 1, y + 1)) for x in range(height - 1) for y in range(width - 1)]
+            diagonal += [((x, y), (x + 1, y - 1)) for x in range(height - 1) for y in range(1, width)]
             if periodic_boundary:
-                diagonal += [((x, height - 1), (x + 1, 0)) for x in range(width - 1)]
-                diagonal += [((width - 1, y), (0, y + 1)) for y in range(height - 1)]
-                diagonal += [((width - 1, height - 1), (0, 0))]
-                diagonal += [((width - 1, 0), (0, height - 1))]
+                diagonal += [((x, width - 1), (x + 1, 0)) for x in range(height - 1)]
+                diagonal += [((x, width - 1), (x - 1, 0)) for x in range(1, height)]
+                diagonal += [((height - 1, y), (0, y + 1)) for y in range(width - 1)]
+                diagonal += [((height - 1, y), (0, y - 1)) for y in range(1, width)]
+                diagonal += [((height - 1, width - 1), (0, 0))]
+                diagonal += [((height - 1, 0), (0, width - 1))]
             connections += diagonal
 
         return connections
