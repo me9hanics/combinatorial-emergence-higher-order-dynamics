@@ -93,6 +93,12 @@ class Structure:
             for entity, connections in connections_LUT.items():
                 connections_LUT[entity] = list(set(connections))
         return connections_LUT
+    
+    def to_dict(self) -> Dict:
+        """
+        For saving structures to a file
+        """
+        raise NotImplementedError()
 
 class Grid(Structure):
     """
@@ -149,11 +155,19 @@ class Grid(Structure):
         self.diagonal_neighbours = diagonal_neighbours
 
     def initialize_entities(self, initial_values, width, height, initial_key_name="t_0"):
+        #TODO work for the case when dict doesn't have keys, just values e.g (1,0): 1 etc.
+        #if isinstance(initial_values, dict):
+        #    for key,value in initial_values.items():
+        #        if not isinstance(value, (dict)):
+        #            initial_values[key] = {initial_key_name: value}
+        #        elif initial_key_name not in value:
+        #            initial_values[key][initial_key_name] = value
+
         entities = {(x,y):{initial_key_name:0} for x in range(width) for y in range(height)}
         if isinstance(initial_values, dict):
             for (x,y), value in initial_values.items():
                 if (x,y) in entities:
-                    initial_values[(x,y)][initial_key_name] = value
+                    entities[(x,y)][initial_key_name] = value
                 else:
                     raise ValueError(f"Initial value for ({x},{y}) is not in the grid.")
         elif isinstance(initial_values, np.ndarray):
@@ -205,6 +219,23 @@ class Grid(Structure):
 
     def array_to_dict(self, array: np.ndarray) -> Dict:
         pass
+    def to_dict(self) -> Dict:
+        """
+        Convert the grid structure to a dictionary.
+        """
+        return {
+            "structure_type": "Grid",
+            "variables": {
+                "width": self.width,
+                "height": self.height,
+                "periodic_boundary": self.periodic_boundary,
+                "diagonal_neighbours": self.diagonal_neighbours,
+                "initial_time_step": self.initial_time_step,
+                "initial_key_name": self.initial_key_name,
+                "connections": self.connections,
+                "entities": self.entities,
+            },
+        }
 
 
 class Graph(Structure):
