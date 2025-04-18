@@ -1,24 +1,32 @@
-from typing import Dict, Callable, Any, List, Tuple
+from typing import Dict, Callable#, Any, List, Tuple
 from higherorder.structures.structures import Structure, Grid, Graph
+from higherorder.utils.utils import get_nonzero_entities
 ##rule (dynamics logic) functions
 
 def general_rule(structure: Structure,
                  rule_function:Callable,
-                 key_name:str = None,
-                 #entities: Dict,
-                 #connections_LUT: Dict,
+                 field_name:str = None,
+                 entities: Dict = {},
+                 connections_LUT: Dict = {},
                  only_nonzero=False,
                  only_state_change=False):
-    entities = structure.get_entities()
-    connections_LUT = structure.get_entities_connections_LUT()
-    if key_name:
+    if not entities:
+        entities = structure.get_entities()
+    if not connections_LUT:
+        connections_LUT = structure.get_entities_connections_LUT()
+
+    if field_name:
         for entity, values in entities.items():
-            if key_name not in values:
-                entities[entity][key_name] = 0
-        entities = {k: v[key_name] for k, v in entities.items()}
+            if field_name not in values:
+                entities[entity][field_name] = 0
+        entities = {k: v[field_name] for k, v in entities.items()}
     states = rule_function(entities = entities, connections_LUT = connections_LUT,
                            structure = structure)
-    pass
+    if only_nonzero:
+        states = get_nonzero_entities(states)
+    if only_state_change:
+        states = {k: v for k, v in states.items() if k in entities and entities[k] != v}
+    return states
     
 def copy_below(entities: Dict = None,
                connections_LUT: Dict = None,
