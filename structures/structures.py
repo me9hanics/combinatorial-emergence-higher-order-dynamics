@@ -14,13 +14,15 @@ class Structure:
     #TODO: t "time slices": should be a dict of times t0, t1, t2, ... storing the nonzero values
     """
     def __init__(self, initial_values=None,
-                 time_step: int = 0, key_name: str = "t_",):
+                 time_step: int = 0, base_name: str = "t_",):
         self.entities = self.initialize_entities()
         self.connections = self.initialize_connections()
 
-        initial_key_name = key_name + str(time_step)
+        key_name = {"base_name":base_name, "index":time_step}
+        self.key_name = key_name #TODO rethink, generalize to dict of key names
+        self.initial_key_name = base_name + str(time_step)
         self.initial_time_step = time_step
-        self.initial_key_name = initial_key_name
+        self.last_iterations = {base_name:time_step}
         if initial_values:
             raise NotImplementedError()
     
@@ -36,32 +38,32 @@ class Structure:
     def get_connections(self):
         return self.connections
     
-    def get_nonzero_entities(self, key_name: str = "t_",
+    def get_nonzero_entities(self, base_name: str = "t_",
                              t:int = None, initial_time_step: int = None,
                              verbose: bool = True): #-> Generator[Tuple[Any, Any], None, None]: 
         """
         Returns the entities with non-zero value at timestep t.
 
-        If setting `key_name` directly to the key which stores the respective values,
+        If setting `base_name` directly to the key which stores the respective values,
             then `t` and `initial_time_step` shall be None.
         Otherwise, `t` is the timestep to check for non-zero values counting from `initial_time_step`,
-            and the property is assumed to be `key_name` + str(t+initial_time_step).
+            and the property is assumed to be `base_name` + str(t+initial_time_step).
         """
         if t is None and initial_time_step is None:
-            key_name = key_name
+            base_name = base_name #TODO
         if isinstance(t, int):
             if not isinstance(initial_time_step, int):
                 initial_time_step = 0
-            key_name = key_name + str(t+initial_time_step)
+            base_name = base_name + str(t+initial_time_step)
 
         nonzero_entities = {}
         for entity, values in self.entities.items():
-            if key_name not in values:
+            if base_name not in values:
                 if verbose:
-                    print(f"Entity {entity} does not have key {key_name} property.")
-            elif values[key_name]:
-                nonzero_entities[entity] = values[key_name]
-                #TODO consider using yield: yield entity, values[key_name]
+                    print(f"Entity {entity} does not have key {base_name} property.")
+            elif values[base_name]:
+                nonzero_entities[entity] = values[base_name]
+                #TODO consider using yield: yield entity, values[base_name]
         return nonzero_entities
 
     def get_entity_connections(self, entity):
@@ -108,7 +110,7 @@ class Grid(Structure):
     def __init__(self, initial_values: np.ndarray | Dict[Tuple[int, int], Any] = None,
                  width: int = None, height: int = None,
                  periodic_boundary: bool = True, diagonal_neighbours: bool = True,
-                 time_step: int = 0, key_name: str = "t_"):
+                 time_step: int = 0, base_name: str = "t_"):
         """
         Initialize a grid structure.
         TODO: left_top_corner
@@ -140,13 +142,15 @@ class Grid(Structure):
         else:
             raise ValueError(f"Current implementation: initial_values must be numpy array or dict, not {type(initial_values)}")
         
-        initial_key_name = key_name + str(time_step)
+        key_name = {"base_name":base_name, "index":time_step}
+        initial_key_name = base_name + str(time_step)
         entities = self.initialize_entities(initial_values, width, height, initial_key_name)
         connections = self.initialize_connections(width, height, periodic_boundary, diagonal_neighbours)
 
+        self.key_name = key_name #TODO rethink, generalize to dict of key names
         self.initial_key_name = initial_key_name
         self.initial_time_step = time_step
-        self.current_time_step = time_step
+        self.last_iterations = {base_name:time_step}
         self.entities = entities
         self.connections = connections
         self.width = width
@@ -219,6 +223,7 @@ class Grid(Structure):
 
     def array_to_dict(self, array: np.ndarray) -> Dict:
         pass
+
     def to_dict(self) -> Dict:
         """
         Convert the grid structure to a dictionary.
@@ -237,18 +242,23 @@ class Grid(Structure):
             },
         }
 
-
 class Graph(Structure):
     def __init__(self, G: nx.Graph,
-                 initial_values=None,
-                 time_step: int = 0, key_name: str = "t_",
+                 initial_values : Dict = None,
+                 time_step: int = 0, base_name: str = "t_",
                  ):
         """
         Initialize a graph structure.
         """
-        initial_key_name = key_name + str(time_step)
-        G, entities = self.initialize_entities(G, initial_values, initial_key_name)
+        key_name = {"base_name":base_name, "index":time_step}
+        initial_key_name = base_name + str(time_step)
+        G, entities = self.initialize_entities(G, initial_values = initial_values,
+                                               initial_key_name = initial_key_name)
 
+        self.key_name = key_name #TODO rethink, generalize to dict of key names
+        self.initial_key_name = initial_key_name
+        self.initial_time_step = time_step
+        self.last_iterations = {base_name:time_step}
         self.initial_time_step = time_step
         self.initial_key_name = initial_key_name
         self.entities = entities
