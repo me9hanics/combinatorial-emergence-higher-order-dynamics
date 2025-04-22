@@ -3,8 +3,8 @@ from higherorder.structures.structures import Structure, Grid, Graph
 from higherorder.utils.utils import get_nonzero_entities
 ##rule (dynamics logic) functions
 
-def general_rule(structure: Structure,
-                 rule_function:Callable,
+def general_rule(rule_function:Callable,
+                 structure: Structure = None,
                  field_name:str = None,
                  entities: Dict = {},
                  connections_LUT: Dict = {},
@@ -33,16 +33,15 @@ def copy_below(entities: Dict = None,
                structure: Grid = None,
                ):
     """
-    Only for Grid structure
+    Only for Grid structure - copy the state of the entity below the current one.
     """
     height = structure.height
     if not entities:
         entities = structure.get_entities()
-    new_states = {(x,y): entities[((x+1)%height,y)] for x,y in entities.keys()}
-    if not structure.periodic_boundary:
-        for (x,y), state in new_states.items():
-            if x == height-1:
-                new_states[(x,y)] = 0
+    new_states = {
+        (x, y): 0 if (x == height - 1) and (not structure.periodic_boundary)
+                  else entities[((x + 1) % height, y)] for x, y in entities.keys()
+    }
     return new_states
 
 def game_of_life(entities: Dict = None,
