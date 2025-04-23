@@ -96,6 +96,9 @@ class Structure:
                 connections_LUT[entity] = list(set(connections))
         return connections_LUT
     
+    def get_time_slice(self, key_name:str="t_0")->np.ndarray:
+        return {entity: values[key_name] for entity, values in self.entities.items()}
+
     def to_dict(self) -> Dict:
         """
         For saving structures to a file
@@ -215,9 +218,6 @@ class Grid(Structure):
 
         return connections
 
-    def get_time_slice(self, T)->np.ndarray:
-        pass
-
     def dict_to_array(self, entities: Dict) -> np.ndarray:
         pass
 
@@ -259,8 +259,6 @@ class Graph(Structure):
         self.initial_key_name = initial_key_name
         self.initial_time_step = time_step
         self.last_iterations = {base_name:time_step}
-        self.initial_time_step = time_step
-        self.initial_key_name = initial_key_name
         self.entities = entities
         self.connections = list(G.edges())
 
