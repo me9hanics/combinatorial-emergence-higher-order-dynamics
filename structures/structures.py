@@ -99,6 +99,15 @@ class Structure:
     def get_time_slice(self, key_name:str="t_0")->np.ndarray:
         return {entity: values[key_name] for entity, values in self.entities.items()}
 
+    def get_entity_sorted_values(self, entity, base_name:str="t_"):
+        """
+        Returns dynamic values of an entity, sorted by time
+        """
+        if entity not in self.entities.keys():
+            raise ValueError(f"Entity {entity} is not in the structure.")
+        values = ([{key:value} for key, value in self.entities[entity].items() if key.startswith(base_name)])
+        return sorted(values, key=lambda x: int(next(iter(x)).split(base_name)[1]))
+
     def to_dict(self) -> Dict:
         """
         For saving structures to a file
