@@ -9,7 +9,8 @@ def general_rule(rule_function:Callable,
                  entities: Dict = {},
                  connections_LUT: Dict = {},
                  only_nonzero=False,
-                 only_state_change=False):
+                 only_state_change=False,
+                 **kwargs):
     if not entities:
         entities = structure.get_entities()
     if not connections_LUT:
@@ -21,29 +22,13 @@ def general_rule(rule_function:Callable,
                 entities[entity][field_name] = 0
         entities = {k: v[field_name] for k, v in entities.items()}
     states = rule_function(entities = entities, connections_LUT = connections_LUT,
-                           structure = structure)
+                           structure = structure, **kwargs)
     if only_nonzero:
         states = get_nonzero_entities(states)
     if only_state_change:
         states = {k: v for k, v in states.items() if k in entities and entities[k] != v}
     return states
     
-def copy_below(entities: Dict = None,
-               connections_LUT: Dict = None,
-               structure: Grid = None,
-               ):
-    """
-    Only for Grid structure - copy the state of the entity below the current one.
-    """
-    height = structure.height
-    if not entities:
-        entities = structure.get_entities()
-    new_states = {
-        (x, y): 0 if (x == height - 1) and (not structure.periodic_boundary)
-                  else entities[((x + 1) % height, y)] for x, y in entities.keys()
-    }
-    return new_states
-
 def game_of_life(entities: Dict = None,
                  connections_LUT: Dict = None,
                  structure: Structure = None
@@ -76,4 +61,52 @@ def game_of_life(entities: Dict = None,
                 new_states[entity] = 1
             else:
                 new_states[entity] = 0
+    return new_states
+
+def operations_in_sequence(sequence: list,
+                           entities: Dict = None,
+                           connections_LUT: Dict = None,
+                           structure: Structure = None,
+                           ):
+    """
+    Rule function that applies a sequence of steps deterministically.
+
+    Args:
+        sequence: List of (A,B, operation) tuples (where A and B are entities),
+                representing the A->B operations in order  
+        entities: Current states of the entities.
+        connections_LUT: Lookup table for connections between entities.
+        structure: The structure containing entities and connections.
+    """
+    if not entities:
+        entities = structure.get_entities()
+    if not connections_LUT:
+        connections_LUT = structure.get_entities_connections_LUT()
+    new_states = entities
+
+    for step in sequence:
+        source = step[0]
+        target = step[1]
+        operation = step[2] if len(step) > 2 else "copy"
+
+        if operation == "copy" and source in entities and target in entities:
+            new_states[target] = entities[source]
+        #TODO add more operations (e.g. "add", "subtract", etc.)
+
+    return new_states
+
+def copy_below(entities: Dict = None,
+               connections_LUT: Dict = None,
+               structure: Grid = None,
+               ):
+    """
+    Only for Grid structure - copy the state of the entity below the current one.
+    """
+    height = structure.height
+    if not entities:
+        entities = structure.get_entities()
+    new_states = {
+        (x, y): 0 if (x == height - 1) and (not structure.periodic_boundary)
+                  else entities[((x + 1) % height, y)] for x, y in entities.keys()
+    }
     return new_states
