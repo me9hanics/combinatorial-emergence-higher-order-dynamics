@@ -67,7 +67,7 @@ def operations_in_sequence(sequence: list,
                            entities: Dict = None,
                            connections_LUT: Dict = None,
                            structure: Structure = None,
-                           ):
+                           operations: str = "copy"):
     """
     Rule function that applies a sequence of steps deterministically.
 
@@ -82,16 +82,29 @@ def operations_in_sequence(sequence: list,
         entities = structure.get_entities()
     if not connections_LUT:
         connections_LUT = structure.get_entities_connections_LUT()
-    new_states = entities
+    new_states = entities.copy()
 
     for step in sequence:
         source = step[0]
         target = step[1]
-        operation = step[2] if len(step) > 2 else "copy"
+        operation = step[2] if len(step) > 2 else operations
 
-        if operation == "copy" and source in entities and target in entities:
-            new_states[target] = entities[source]
-        #TODO add more operations (e.g. "add", "subtract", etc.)
+        if operation == "copy":
+            new_states[target] = new_states[source]
+        elif operation == "copy_from":
+            new_states[source] = new_states[target]
+        elif operation == "add":
+            new_states[target] += new_states[source]
+        elif operation == "subtract":
+            new_states[target] -= new_states[source]
+        elif operation == "replace":
+            new_states[target] = new_states[source]
+            new_states[source] = 0
+        elif operation == "swap":
+            new_states[source], new_states[target] = new_states[target], new_states[source]
+        elif type(operation) == function:
+            new_states[source], new_states[target] = operation(source_value = new_states[source],
+                                                               target_value = new_states[target])
 
     return new_states
 
