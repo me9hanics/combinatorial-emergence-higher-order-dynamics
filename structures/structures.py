@@ -32,11 +32,11 @@ class Structure:
     def initialize_connections(self):
         raise NotImplementedError
     
-    def get_entities(self):
-        return self.entities
+    def get_entities(self)-> Dict:
+        return self.entities.copy()
     
-    def get_connections(self):
-        return self.connections
+    def get_connections(self)-> List[Tuple[Any, Any]]:
+        return self.connections.copy()
     
     def get_nonzero_entities(self, base_name: str = "t_",
                              t:int = None, initial_time_step: int = None,
@@ -73,7 +73,7 @@ class Structure:
         if entity not in self.entities.keys():
             raise ValueError(f"Entity {entity} is not in the structure.")
         connections = []
-        for connection in self.connections:
+        for connection in self.get_connections():
             if entity in connection:
                 connections.append(connection)
         return connections
@@ -83,7 +83,7 @@ class Structure:
         Returns a lookup table of the connections of each entity.
         """
         connections_LUT = {}
-        for entity_A, entity_B in self.connections:
+        for entity_A, entity_B in self.get_connections():
             if entity_A not in connections_LUT:
                 connections_LUT[entity_A] = []
             if entity_B not in connections_LUT:
@@ -97,13 +97,13 @@ class Structure:
         return connections_LUT
     
     def get_time_slice(self, key_name:str="t_0")->np.ndarray:
-        return {entity: values[key_name] for entity, values in self.entities.items()}
+        return {entity: values[key_name] for entity, values in self.get_entities().items()}
 
     def get_entity_sorted_values(self, entity, base_name:str="t_"):
         """
         Returns dynamic values of an entity, sorted by time
         """
-        if entity not in self.entities.keys():
+        if entity not in self.get_entities().keys():
             raise ValueError(f"Entity {entity} is not in the structure.")
         values = ([{key:value} for key, value in self.entities[entity].items() if key.startswith(base_name)])
         return sorted(values, key=lambda x: int(next(iter(x)).split(base_name)[1]))
@@ -171,14 +171,6 @@ class Grid(Structure):
         self.diagonal_neighbours = diagonal_neighbours
 
     def initialize_entities(self, initial_values, width, height, initial_key_name="t_0"):
-        #TODO work for the case when dict doesn't have keys, just values e.g (1,0): 1 etc.
-        #if isinstance(initial_values, dict):
-        #    for key,value in initial_values.items():
-        #        if not isinstance(value, (dict)):
-        #            initial_values[key] = {initial_key_name: value}
-        #        elif initial_key_name not in value:
-        #            initial_values[key][initial_key_name] = value
-
         entities = {(x,y):{initial_key_name:0} for x in range(width) for y in range(height)}
         if isinstance(initial_values, dict):
             for (x,y), value in initial_values.items():
@@ -244,10 +236,12 @@ class Grid(Structure):
                 "height": self.height,
                 "periodic_boundary": self.periodic_boundary,
                 "diagonal_neighbours": self.diagonal_neighbours,
-                "initial_time_step": self.initial_time_step,
+                "key_name": self.key_name.copy(),
                 "initial_key_name": self.initial_key_name,
-                "connections": self.connections,
-                "entities": self.entities,
+                "initial_time_step": self.initial_time_step,
+                "last_iterations": self.last_iterations.copy(),
+                "connections": self.get_connections(),
+                "entities": self.get_entities(),
             },
         }
 
