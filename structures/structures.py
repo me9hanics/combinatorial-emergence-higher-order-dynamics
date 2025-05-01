@@ -228,6 +228,29 @@ class Grid(Structure):
 
         return connections
 
+    def get_components_topology_representation(self, key_name:str="t_0", rotation = False,
+                                               only_nonzero: bool = True):
+        """
+        Move each component by their center of mass (for simpler comparison of topology),
+            and optionally unify orientation.
+        """
+        from higherorder.utils.utils import blobs #Lazy import to avoid circular import
+
+        if rotation:
+            raise NotImplementedError("Rotation not implemented yet.")
+        #if key_name:
+        #    entities = self.get_entities()
+        #    entities = {k: v[key_name] for k, v in entities.items()}
+        components = blobs(structure=self, entities = self.get_entities(),
+                           connections_LUT = self.get_entities_connections_LUT(),
+                           key_name = key_name, only_nonzero=only_nonzero)
+        for component in components:
+            mean_x = np.mean([x for x, y in component])
+            mean_y = np.mean([y for x, y in component])
+            for i, (x, y) in enumerate(component):
+                component[i] = (x - mean_x, y - mean_y)
+        return components
+
     def dict_to_array(self, entities: Dict) -> np.ndarray:
         pass
 
