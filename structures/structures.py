@@ -108,6 +108,13 @@ class Structure:
         values = ([{key:value} for key, value in self.entities[entity].items() if key.startswith(base_name)])
         return sorted(values, key=lambda x: int(next(iter(x)).split(base_name)[1]))
 
+    def get_components_topology_representation(self, key_name:str="t_0"):
+        """
+        Take each component and "reduce" them to a representation of their topology that
+                is easier to deal with - e.g. move by the center of mass, fix orientation
+        """
+        pass
+
     def to_dict(self) -> Dict:
         """
         For saving structures to a file
@@ -119,6 +126,7 @@ class Grid(Structure):
     Grid structure, defined width, height, initial values, and connections
         (depending on periodic boundary and diagonal neighbors).
     """
+    #TODO fix array 
     def __init__(self, initial_values: np.ndarray | Dict[Tuple[int, int], Any] = None,
                  width: int = None, height: int = None,
                  periodic_boundary: bool = True, diagonal_neighbours: bool = True,
@@ -130,7 +138,10 @@ class Grid(Structure):
         
         #TODO put into the respective function
         if isinstance(initial_values, np.ndarray):
-            width, height = initial_values.shape
+            if not width:   
+                width = initial_values.shape[0]
+            if not height:
+                height = initial_values.shape[1]
             #left_top_corner = (0, 0)
         elif isinstance(initial_values, dict):
             #Assuming the dictionary keys are tuples (x, y) of positive coordinates
@@ -172,16 +183,14 @@ class Grid(Structure):
 
     def initialize_entities(self, initial_values, width, height, initial_key_name="t_0"):
         entities = {(x,y):{initial_key_name:0} for x in range(width) for y in range(height)}
+        if isinstance(initial_values, np.ndarray):
+            initial_values = self.array_to_dict(initial_values)
         if isinstance(initial_values, dict):
             for (x,y), value in initial_values.items():
                 if (x,y) in entities:
                     entities[(x,y)][initial_key_name] = value
                 else:
                     raise ValueError(f"Initial value for ({x},{y}) is not in the grid.")
-        elif isinstance(initial_values, np.ndarray):
-            for x in range(width):
-                for y in range(height):
-                    entities[(x,y)][initial_key_name] = initial_values[x,y]
         return entities
     
     def initialize_connections(self, width, height, periodic_boundary, diagonal_neighbours):
@@ -223,7 +232,7 @@ class Grid(Structure):
         pass
 
     def array_to_dict(self, array: np.ndarray) -> Dict:
-        pass
+        return {(x, y): array[x, y] for x in range(array.shape[0]) for y in range(array.shape[1])}
 
     def to_dict(self) -> Dict:
         """
