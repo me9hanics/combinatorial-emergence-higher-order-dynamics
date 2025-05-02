@@ -67,9 +67,15 @@ class Model:
                         only_nonzero=only_nonzero,
                         only_state_change=only_state_change,
                      )
+            if only_state_change:
+                #TODO construct the correct states dict
+                raise NotImplementedError("only_state_change=True not implemented yet")
             key_name = base_name + str(time_step + i)
+            if only_nonzero:
+                previous_key_name = base_name + str(time_step + i-1)
+                for entity, value in states.items():
+                    self.structure.entities[entity][key_name] = self.structure.entities[entity][previous_key_name]
             for entity, value in self.structure.entities.items():
-                #TODO handle only_state_change=True
                 if entity not in states: 
                     #TODO: fix bug - some entities go "beyond" the grid (e.g. instead of going around)
                     self.structure.entities[entity] = {}
@@ -78,3 +84,12 @@ class Model:
             self.key_name = {"base_name": base_name, "index": time_step + i}
             self.time_step = time_step + i
         #return self.structure.entities, self.structure.last_iterations, self.key_name
+
+    def simulate_till_periodicity(self, 
+                                 time_step = None,
+                                 base_name = None,
+                                 only_nonzero=False,
+                                 only_state_change = False,
+                                 max_steps=1000,):
+        #TODO add extra caution for the case: only_state_change=True
+        raise NotImplementedError("simulate_till_periodicity not implemented yet")
