@@ -37,11 +37,7 @@ class Model:
         self.time_step = time_step
         self.initial_time_step = time_step
 
-    def simulation(self, steps=10,
-                   time_step = None,
-                   base_name = None,
-                   only_nonzero=False,
-                   only_state_change=False):
+    def _setup_simulation(self, time_step=None, base_name=None):
         if isinstance(base_name, type(None)):
             base_name = getattr(self.structure, 'key_name', {}).get('base_name', "t_")
 
@@ -51,7 +47,14 @@ class Model:
         key_name = base_name + str(time_step)
         if not any([key_name in v for v in self.structure.entities.values()]):
             raise ValueError(f"Key name {key_name} not found in some structure entities.")
-        
+        return key_name, base_name, time_step
+
+    def simulation(self, steps=10,
+                   time_step = None,
+                   base_name = None,
+                   only_nonzero=False,
+                   only_state_change=False):
+        key_name, base_name, time_step = self._setup_simulation(time_step, base_name)
         states = self.structure.get_entities()
         states = {k: v[key_name] for k, v in states.items()}
         connections_LUT = self.structure.get_entities_connections_LUT()
@@ -72,6 +75,7 @@ class Model:
                 raise NotImplementedError("only_state_change=True not implemented yet")
             key_name = base_name + str(time_step + i)
             if only_nonzero:
+                #TODO rewrite
                 previous_key_name = base_name + str(time_step + i-1)
                 for entity, value in states.items():
                     self.structure.entities[entity][key_name] = self.structure.entities[entity][previous_key_name]
@@ -91,5 +95,5 @@ class Model:
                                  only_nonzero=False,
                                  only_state_change = False,
                                  max_steps=1000,):
-        #TODO add extra caution for the case: only_state_change=True
+        key_name, base_name, time_step = self._setup_simulation(time_step, base_name)
         raise NotImplementedError("simulate_till_periodicity not implemented yet")
