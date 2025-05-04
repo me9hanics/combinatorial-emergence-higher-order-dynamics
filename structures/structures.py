@@ -136,7 +136,25 @@ class Grid(Structure):
         TODO: left_top_corner
         """
         
-        #TODO put into the respective function
+        initial_values, width, height = self._setup_initialization(initial_values, width, height)
+        
+        key_name = {"base_name":base_name, "index":time_step}
+        initial_key_name = base_name + str(time_step)
+        entities = self.initialize_entities(initial_values, width, height, initial_key_name)
+        connections = self.initialize_connections(width, height, periodic_boundary, diagonal_neighbours)
+
+        self.key_name = key_name #TODO rethink, generalize to dict of key names
+        self.initial_key_name = initial_key_name
+        self.initial_time_step = time_step
+        self.last_iterations = {base_name:time_step}
+        self.entities = entities
+        self.connections = connections
+        self.width = width
+        self.height = height
+        self.periodic_boundary = periodic_boundary
+        self.diagonal_neighbours = diagonal_neighbours
+
+    def _setup_initialization(self, initial_values, width, height):
         if isinstance(initial_values, np.ndarray):
             if not width:   
                 width = initial_values.shape[0]
@@ -144,7 +162,7 @@ class Grid(Structure):
                 height = initial_values.shape[1]
             #left_top_corner = (0, 0)
         elif isinstance(initial_values, dict):
-            #Assuming the dictionary keys are tuples (x, y) of positive coordinates
+            """Assuming the dictionary keys are tuples (x, y) of positive coordinates"""
             #TODO check for negative coordinates
             max_x = max(x for x, _ in initial_values.keys())
             max_y = max(y for _, y in initial_values.keys())
@@ -164,23 +182,8 @@ class Grid(Structure):
             initial_values = np.zeros((width, height))
         else:
             raise ValueError(f"Current implementation: initial_values must be numpy array or dict, not {type(initial_values)}")
-        
-        key_name = {"base_name":base_name, "index":time_step}
-        initial_key_name = base_name + str(time_step)
-        entities = self.initialize_entities(initial_values, width, height, initial_key_name)
-        connections = self.initialize_connections(width, height, periodic_boundary, diagonal_neighbours)
-
-        self.key_name = key_name #TODO rethink, generalize to dict of key names
-        self.initial_key_name = initial_key_name
-        self.initial_time_step = time_step
-        self.last_iterations = {base_name:time_step}
-        self.entities = entities
-        self.connections = connections
-        self.width = width
-        self.height = height
-        self.periodic_boundary = periodic_boundary
-        self.diagonal_neighbours = diagonal_neighbours
-
+        return initial_values, width, height
+    
     def initialize_entities(self, initial_values, width, height, initial_key_name="t_0"):
         entities = {(x,y):{initial_key_name:0} for x in range(width) for y in range(height)}
         if isinstance(initial_values, np.ndarray):
