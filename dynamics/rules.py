@@ -17,10 +17,11 @@ def general_rule(rule_function:Callable,
         connections_LUT = structure.get_entities_connections_LUT()
 
     if field_name:
-        for entity, values in entities.items():
-            if field_name not in values:
-                entities[entity][field_name] = 0
-        entities = {k: v[field_name] for k, v in entities.items()}
+        entities = {k: v[field_name] for k, v in entities.items() if field_name in v}
+    if structure:
+        for entity in structure.get_entities():
+            if entity not in entities:
+                entities[entity] = 0
     states = rule_function(entities = entities, connections_LUT = connections_LUT,
                            structure = structure, **kwargs)
     if only_nonzero:
