@@ -137,7 +137,7 @@ class Grid(Structure):
         """
         
         initial_values, width, height = self._setup_initialization(initial_values, width, height)
-        
+
         key_name = {"base_name":base_name, "index":time_step}
         initial_key_name = base_name + str(time_step)
         entities = self.initialize_entities(initial_values, width, height, initial_key_name)
@@ -187,7 +187,8 @@ class Grid(Structure):
     def initialize_entities(self, initial_values, width, height, initial_key_name="t_0"):
         entities = {(x,y):{initial_key_name:0} for x in range(width) for y in range(height)}
         if isinstance(initial_values, np.ndarray):
-            initial_values = self.array_to_dict(initial_values)
+            from higherorder.utils.utils import array_to_dict #Lazy import to avoid circular import
+            initial_values = array_to_dict(initial_values)
         if isinstance(initial_values, dict):
             for (x,y), value in initial_values.items():
                 if (x,y) in entities:
@@ -253,12 +254,6 @@ class Grid(Structure):
             for i, (x, y) in enumerate(component):
                 component[i] = (x - mean_x, y - mean_y)
         return components
-
-    def dict_to_array(self, entities: Dict) -> np.ndarray:
-        pass
-
-    def array_to_dict(self, array: np.ndarray) -> Dict:
-        return {(x, y): array[x, y] for x in range(array.shape[0]) for y in range(array.shape[1])}
 
     def to_dict(self) -> Dict:
         """

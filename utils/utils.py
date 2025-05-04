@@ -1,6 +1,9 @@
-from typing import Dict, Callable, Any, List, Tuple
+from typing import Dict, Callable, Any, List, Tuple #, TYPE_CHECKING
+import numpy as np
 import datetime
 from higherorder.structures.structures import Structure, Grid, Graph
+#if TYPE_CHECKING:
+#    from higherorder.structures.structures import Structure, Grid, Graph
 
 def get_nonzero_entities(entities: Dict,
                          key = None):
@@ -36,6 +39,17 @@ def save_structures(structures: List[Graph | Grid],
         json.dump(structures_dict, f, indent=4)
 
     #TODO function to turn key-value dict into key-dict{"key_name": value} dict
+
+def dict_to_array(entities: Dict) -> np.ndarray:
+    width = max(x for x, _ in entities.keys()) + 1
+    height = max(y for _, y in entities.keys()) + 1
+    array = np.zeros((width, height))
+    for (x, y), value in entities.items():
+        array[x, y] = value
+    return array
+
+def array_to_dict(array: np.ndarray) -> Dict:
+    return {(x, y): array[x, y] for x in range(array.shape[0]) for y in range(array.shape[1])}
 
 def blobs(structure: Structure = None,
           entities: Dict = None,
