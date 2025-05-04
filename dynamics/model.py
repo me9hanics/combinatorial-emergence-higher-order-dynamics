@@ -37,7 +37,7 @@ class Model:
         self.time_step = time_step
         self.initial_time_step = time_step
 
-    def _setup_simulation(self, time_step=None, base_name=None):
+    def _setup_key_name(self, time_step=None, base_name=None):
         if isinstance(base_name, type(None)):
             base_name = getattr(self.structure, 'key_name', {}).get('base_name', "t_")
 
@@ -49,44 +49,64 @@ class Model:
             raise ValueError(f"Key name {key_name} not found in some structure entities.")
         return key_name, base_name, time_step
 
+    def step(self, rule_function: Callable = None,
+             entity_states: Dict = None,
+             connections_LUT: Dict = None,
+             only_nonzero: bool = False,
+             only_state_change: bool = False,
+             base_name: Dict = None,
+             time_step: int = None,
+             ):
+        key_name, base_name, time_step = self._setup_key_name(time_step, base_name)
+        rule_function = rule_function or self.dynamics_func
+        entity_states = entity_states or {k: v[key_name] for k, v in self.structure.entities.items()}
+        connections_LUT = connections_LUT or self.structure.get_entities_connections_LUT()
+
+        states = general_rule(rule_function=rule_function,
+                        #structure=self.structure,
+                        #field_name = None, #key_name,
+                        entities=entity_states,
+                        connections_LUT=connections_LUT,
+                        only_nonzero=only_nonzero,
+                        only_state_change=only_state_change,
+                     )
+        previous_key_name = key_name
+        key_name = base_name + str(time_step + 1)
+        if only_state_change:
+            #TODO construct the correct states dict
+            raise NotImplementedError("only_state_change=True not implemented yet")
+            for entity, value in states.items():
+                self.structure.entities[entity][key_name] = self.structure.entities[entity][previous_key_name]
+        for entity, value in self.structure.entities.items():
+            if entity not in states:
+                #TODO: fix bug - some entities go "beyond" the grid (e.g. instead of going around)
+                self.structure.entities[entity] = {}
+            self.structure.entities[entity][key_name] = states[entity]
+        self.structure.last_iterations[base_name] = time_step + 1
+        self.key_name = {"base_name": base_name, "index": time_step + 1}
+        self.time_step = time_step + 1
+        return states
+
     def simulation(self, steps=10,
                    time_step = None,
                    base_name = None,
                    only_nonzero=False,
                    only_state_change=False):
-        key_name, base_name, time_step = self._setup_simulation(time_step, base_name)
-        states = self.structure.get_entities()
-        states = {k: v[key_name] for k, v in states.items()}
+        key_name, base_name, time_step = self._setup_key_name(time_step, base_name)
+        states = {k: v[key_name] for k, v in self.structure.get_entities().items()}
         connections_LUT = self.structure.get_entities_connections_LUT()
         #self.initial_key_name = key_name #TODO rethink
         #self.initial_time_step = time_step
-        for i in range(1, steps+1):
-            states = general_rule(
-                        rule_function=self.dynamics_func,
-                        #structure=self.structure,
-                        #field_name = key_name,
-                        entities=states,
-                        connections_LUT=connections_LUT,
-                        only_nonzero=only_nonzero,
-                        only_state_change=only_state_change,
+        for i in range(0, steps):
+            states = self.step(
+                        rule_function = self.dynamics_func,
+                        entity_states = states,
+                        connections_LUT = connections_LUT,
+                        only_nonzero = only_nonzero,
+                        only_state_change = only_state_change,
+                        base_name = base_name,
+                        time_step = time_step + i,
                      )
-            if only_state_change:
-                #TODO construct the correct states dict
-                raise NotImplementedError("only_state_change=True not implemented yet")
-            key_name = base_name + str(time_step + i)
-            if only_nonzero:
-                #TODO rewrite
-                previous_key_name = base_name + str(time_step + i-1)
-                for entity, value in states.items():
-                    self.structure.entities[entity][key_name] = self.structure.entities[entity][previous_key_name]
-            for entity, value in self.structure.entities.items():
-                if entity not in states: 
-                    #TODO: fix bug - some entities go "beyond" the grid (e.g. instead of going around)
-                    self.structure.entities[entity] = {}
-                self.structure.entities[entity][key_name] = states[entity]
-            self.structure.last_iterations[base_name] = time_step + i
-            self.key_name = {"base_name": base_name, "index": time_step + i}
-            self.time_step = time_step + i
         #return self.structure.entities, self.structure.last_iterations, self.key_name
 
     def simulate_till_periodicity(self, 
@@ -95,5 +115,5 @@ class Model:
                                  only_nonzero=False,
                                  only_state_change = False,
                                  max_steps=1000,):
-        key_name, base_name, time_step = self._setup_simulation(time_step, base_name)
+        key_name, base_name, time_step = self._setup_key_name(time_step, base_name)
         raise NotImplementedError("simulate_till_periodicity not implemented yet")
