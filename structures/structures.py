@@ -1,5 +1,6 @@
 import numpy as np
 import networkx as nx
+import copy
 from typing import List, Tuple, Dict, Generator, Any
 
 class Structure:
@@ -96,8 +97,13 @@ class Structure:
                 connections_LUT[entity] = list(set(connections))
         return connections_LUT
     
-    def get_time_slice(self, key_name:str="t_0")->np.ndarray:
-        return {entity: values[key_name] for entity, values in self.get_entities().items()}
+    def get_time_slice(self, key_name:str="t_0", fill_missing = False)->np.ndarray:
+        entities = self.get_entities()
+        if fill_missing:
+            entities = {entity:values[key_name] if key_name in values else 0 for entity, values in entities.items()}
+        else:
+            entities = {entity:values[key_name] for entity, values in entities.items() if key_name in values}
+        return entities
 
     def get_entity_sorted_values(self, entity, base_name:str="t_"):
         """
@@ -120,6 +126,17 @@ class Structure:
         For saving structures to a file
         """
         raise NotImplementedError()
+    
+    def __deepcopy__(self, memo):
+        """
+        Generated code
+        """
+        cls = self.__class__
+        new_instance = cls.__new__(cls)
+        memo[id(self)] = new_instance  # Avoid infinite recursion for circular references
+        for key, value in self.__dict__.items():
+            setattr(new_instance, key, copy.deepcopy(value, memo))
+        return new_instance
 
 class Grid(Structure):
     """
@@ -232,28 +249,30 @@ class Grid(Structure):
 
         return connections
 
-    def get_components_topology_representation(self, key_name:str="t_0", rotation = False,
+    def get_components_topology_representation(self, entities = None, key_name:str=None, orientation = False,
                                                only_nonzero: bool = True):
         """
         Move each component by their center of mass (for simpler comparison of topology),
             and optionally unify orientation.
         """
         from higherorder.utils.utils import blobs #Lazy import to avoid circular import
-
-        if rotation:
-            raise NotImplementedError("Rotation not implemented yet.")
+        if orientation:
+            raise NotImplementedError("Orientation not implemented yet.")
+        if not entities and not key_name:
+            key_name = "t_0"
         #if key_name:
         #    entities = self.get_entities()
         #    entities = {k: v[key_name] for k, v in entities.items()}
-        components = blobs(structure=self, entities = self.get_entities(),
+        components = blobs(structure=self, entities = entities,
                            connections_LUT = self.get_entities_connections_LUT(),
                            key_name = key_name, only_nonzero=only_nonzero)
-        for component in components:
+        for i, component in enumerate(components.copy()):
             mean_x = np.mean([x for x, y in component])
             mean_y = np.mean([y for x, y in component])
-            for i, (x, y) in enumerate(component):
-                component[i] = (x - mean_x, y - mean_y)
-        return components
+            for j, (x, y) in enumerate(component):
+                component[j] = (round(x - mean_x, 7) , round(y - mean_y, 7))
+            components[i] = sorted(component, key=lambda coord: (coord[0], coord[1]))
+        return sorted(components, key=lambda comp: (comp[0][0], comp[0][1])) #if x else (float('inf'), float('inf'))
 
     def to_dict(self) -> Dict:
         """
