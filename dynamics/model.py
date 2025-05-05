@@ -63,7 +63,7 @@ class Model:
         connections_LUT = connections_LUT or self.structure.get_entities_connections_LUT()
 
         states = general_rule(rule_function=rule_function,
-                        #structure=self.structure,
+                        structure=self.structure,
                         #field_name = None, #key_name,
                         entities=entity_states,
                         connections_LUT=connections_LUT,
@@ -77,8 +77,8 @@ class Model:
             raise NotImplementedError("only_state_change=True not implemented yet")
             for entity, value in states.items():
                 self.structure.entities[entity][key_name] = self.structure.entities[entity][previous_key_name]
-        for entity, value in self.structure.entities.items():
-            if entity not in states:
+        for entity, value in states.items():
+            if entity not in self.structure.entities:
                 #TODO: fix bug - some entities go "beyond" the grid (e.g. instead of going around)
                 self.structure.entities[entity] = {}
             self.structure.entities[entity][key_name] = states[entity]
@@ -112,8 +112,31 @@ class Model:
     def simulate_till_periodicity(self, 
                                  time_step = None,
                                  base_name = None,
-                                 only_nonzero=False,
+                                 only_nonzero = True,
                                  only_state_change = False,
                                  max_steps=1000,):
         key_name, base_name, time_step = self._setup_key_name(time_step, base_name)
-        raise NotImplementedError("simulate_till_periodicity not implemented yet")
+        states = {k: v[key_name] for k, v in self.structure.get_entities().items()}
+        connections_LUT = self.structure.get_entities_connections_LUT()
+
+        states_topology = self.structure.get_components_topology_representation(entities=states,
+                                                                                only_nonzero = only_nonzero,
+                                                                                )
+        states_topologies = []
+        steps = 0
+        while (states_topology not in states_topologies) and (steps < max_steps):
+            states_topologies.append(states_topology)
+            states = self.step(
+                        rule_function = self.dynamics_func,
+                        entity_states = states,
+                        connections_LUT = connections_LUT,
+                        only_nonzero = only_nonzero,
+                        only_state_change = only_state_change,
+                        base_name = base_name,
+                        time_step = time_step + steps,
+                     )
+            states_topology = self.structure.get_components_topology_representation(entities=states,
+                                                                                    only_nonzero = only_nonzero,
+                                                                                    )
+            steps += 1
+        #return states_topologies, steps, states
