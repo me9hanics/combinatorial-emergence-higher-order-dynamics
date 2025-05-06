@@ -51,6 +51,18 @@ def dict_to_array(entities: Dict) -> np.ndarray:
 def array_to_dict(array: np.ndarray) -> Dict:
     return {(x, y): array[x, y] for x in range(array.shape[0]) for y in range(array.shape[1])}
 
+def get_unique_connections(connections: List,
+                           undirected = True) -> List:
+    """
+    Get unique connections from a list of connections.
+    """
+    unique_connections = []
+    for (a,b) in connections:
+        if (a,b) not in unique_connections:
+            if (not undirected) or ((b,a) not in unique_connections):
+                unique_connections.append((a,b))
+    return unique_connections
+
 def blobs(structure: Structure = None,
           entities: Dict = None,
           connections_LUT: Dict = None,
