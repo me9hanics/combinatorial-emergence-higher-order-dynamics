@@ -31,6 +31,7 @@ class Structure:
         raise NotImplementedError
 
     def initialize_connections(self):
+        """For undirected connections, try to order the elemnts in a uniform way"""
         raise NotImplementedError
     
     def get_entities(self)-> Dict:
@@ -39,6 +40,13 @@ class Structure:
     def get_connections(self)-> List[Tuple[Any, Any]]:
         return self.connections.copy()
     
+    def get_unique_connections(self, connections:List = None,
+                               undirected = True) -> List[Tuple[Any, Any]]:
+        from higherorder.utils.utils import unique_connections #Lazy import to avoid circular import
+        if connections is None:
+            connections = self.get_connections()
+        return unique_connections(connections, undirected=undirected)
+
     def get_nonzero_entities(self, base_name: str = "t_",
                              t:int = None, initial_time_step: int = None,
                              verbose: bool = True): #-> Generator[Tuple[Any, Any], None, None]: 
@@ -69,7 +77,7 @@ class Structure:
 
     def get_entity_connections(self, entity):
         """
-        Returns the connections of the given entity.
+        Returns the neighbours of the given entity.
         """
         if entity not in self.entities.keys():
             raise ValueError(f"Entity {entity} is not in the structure.")
@@ -78,6 +86,46 @@ class Structure:
             if entity in connection:
                 connections.append(connection)
         return connections
+    
+    def get_entity_neighbours(self, entity):
+        """
+        Returns the neighbours of the given entity.
+        """
+        return [connection[1] if connection[0] == entity else connection[0]
+                for connection in self.get_entity_connections(entity)]
+
+    def get_entities_connections(self, entities: List[Any] = None,
+                               duplicate_removal = True,
+                               external_only = False,
+                               undirected = True):
+        if entities is None:
+            entities = self.get_entities().keys()
+        connections = []
+        for entity in entities:
+            connections += self.get_entity_connections(entity)
+        if duplicate_removal:
+            connections = self.get_unique_connections(connections, undirected=undirected)
+        if external_only:
+            connections = [(a,b) for (a,b) in connections if (a not in entities) or (b not in entities)]
+        return connections
+
+    def get_entities_neighbours(self, entities: List[Any] = None,
+                                duplicate_removal = True,
+                                external_only = False,
+                                ):
+        """
+        Returns a generator of the connections of the given entities.
+        """
+        if entities is None:
+            entities = self.get_entities().keys()
+        neighbours = []
+        for entity in entities:
+            neighbours += self.get_entity_neighbours(entity)
+        if duplicate_removal:
+            neighbours = list(set(neighbours))
+        if external_only:
+            neighbours = [neighbour for neighbour in neighbours if neighbour not in entities]
+        return neighbours
     
     def get_entities_connections_LUT(self, duplicate_removal = True):
         """
@@ -119,7 +167,7 @@ class Structure:
         Take each component and "reduce" them to a representation of their topology that
                 is easier to deal with - e.g. move by the center of mass, fix orientation
         """
-        pass
+        raise NotImplementedError()
 
     def to_dict(self) -> Dict:
         """

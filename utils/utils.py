@@ -51,7 +51,7 @@ def dict_to_array(entities: Dict) -> np.ndarray:
 def array_to_dict(array: np.ndarray) -> Dict:
     return {(x, y): array[x, y] for x in range(array.shape[0]) for y in range(array.shape[1])}
 
-def get_unique_connections(connections: List,
+def unique_connections(connections: List,
                            undirected = True) -> List:
     """
     Get unique connections from a list of connections.
