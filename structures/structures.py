@@ -47,23 +47,20 @@ class Structure:
             connections = self.get_connections()
         return unique_connections(connections, undirected=undirected)
 
-    def get_nonzero_entities(self, base_name: str = "t_",
-                             t:int = None, initial_time_step: int = None,
-                             verbose: bool = True): #-> Generator[Tuple[Any, Any], None, None]: 
+    def get_nonzero_entities(self, base_name: str = "t_0",
+                             t:int = None, verbose: bool = True):
         """
         Returns the entities with non-zero value at timestep t.
 
         If setting `base_name` directly to the key which stores the respective values,
-            then `t` and `initial_time_step` shall be None.
-        Otherwise, `t` is the timestep to check for non-zero values counting from `initial_time_step`,
-            and the property is assumed to be `base_name` + str(t+initial_time_step).
+            then `t` shall be None.
+        Otherwise, `t` is the timestep to check that is put in the key name,
+            and the `base_name` is the prefix: `base_name` + str(t).
         """
-        if t is None and initial_time_step is None:
-            base_name = base_name #TODO
+        if t is None:
+            base_name = base_name
         if isinstance(t, int):
-            if not isinstance(initial_time_step, int):
-                initial_time_step = 0
-            base_name = base_name + str(t+initial_time_step)
+            base_name = base_name + str(t)
 
         nonzero_entities = {}
         for entity, values in self.entities.items():
