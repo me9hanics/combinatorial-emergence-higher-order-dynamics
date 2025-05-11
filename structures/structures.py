@@ -1,6 +1,5 @@
 import numpy as np
 import networkx as nx
-import copy
 from typing import List, Tuple, Dict, Generator, Any
 
 class Structure:
@@ -173,15 +172,18 @@ class Structure:
         raise NotImplementedError()
     
     def __deepcopy__(self, memo):
-        """
-        Generated code
-        """
+        """Generated code"""
+        from copy import deepcopy
         cls = self.__class__
         new_instance = cls.__new__(cls)
         memo[id(self)] = new_instance  # Avoid infinite recursion for circular references
         for key, value in self.__dict__.items():
-            setattr(new_instance, key, copy.deepcopy(value, memo))
+            setattr(new_instance, key, deepcopy(value, memo))
         return new_instance
+    
+    def copy(self):
+        from copy import deepcopy
+        return deepcopy(self)
 
 class Grid(Structure):
     """
