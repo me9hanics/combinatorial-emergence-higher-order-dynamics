@@ -46,29 +46,33 @@ class Structure:
             connections = self.get_connections()
         return unique_connections(connections, undirected=undirected)
 
-    def get_nonzero_entities(self, base_name: str = "t_0",
-                             t:int = None, verbose: bool = True):
+    def get_nonzero_entities(self, name: str = "t_0",
+                             t:int = None, string_keys: bool = False,
+                             verbose: bool = True):
         """
         Returns the entities with non-zero value at timestep t.
 
-        If setting `base_name` directly to the key which stores the respective values,
+        If setting `name` directly to the key which stores the respective values,
             then `t` shall be None.
         Otherwise, `t` is the timestep to check that is put in the key name,
-            and the `base_name` is the prefix: `base_name` + str(t).
+            and the `name` is the prefix: `name` + str(t).
         """
         if t is None:
-            base_name = base_name
+            name = name
         if isinstance(t, int):
-            base_name = base_name + str(t)
+            name = name + str(t)
 
         nonzero_entities = {}
         for entity, values in self.entities.items():
-            if base_name not in values:
+            if name not in values:
                 if verbose:
-                    print(f"Entity {entity} does not have key {base_name} property.")
-            elif values[base_name]:
-                nonzero_entities[entity] = values[base_name]
-                #TODO consider using yield: yield entity, values[base_name]
+                    print(f"Entity {entity} does not have key {name} property.")
+            elif values[name]:
+                nonzero_entities[entity] = values[name]
+                #TODO consider using yield: yield entity, values[name]
+
+        if string_keys:
+            nonzero_entities = {str(entity): value for entity, value in nonzero_entities.items()}
         return nonzero_entities
 
     def get_entity_connections(self, entity):
@@ -166,10 +170,7 @@ class Structure:
         raise NotImplementedError()
 
     def to_dict(self) -> Dict:
-        """
-        For saving structures to a file
-        """
-        raise NotImplementedError()
+        return {"structure": str(type(self)).split("'")[1].split(".")[-1], **self.__dict__}
     
     def __deepcopy__(self, memo):
         """Generated code"""
