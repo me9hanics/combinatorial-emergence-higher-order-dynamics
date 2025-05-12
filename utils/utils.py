@@ -170,12 +170,30 @@ def blobs(structure: Structure = None,
                     components.append(component)
     return components
 
-def entities_time_array(entities: Dict,
+def entities_time_array(entities: Dict[Tuple, Dict[str, Any]],
                         base_name: str = "t_",
                         extra_dimension: bool = False,
                         ):
     """
     Get entities in time ordering.
     """
-#TODO time_ordering: 3D or 2D, likely flattened 2D (including time); every row is a time step., other array values are 
-    #Try for self-ref, "full grid", snippet etc.
+    num_entities = len(entities)
+    if not extra_dimension:
+        num_timesteps = 1 + max(int(timesteps.split("t_")[-1])
+                                for states in entities.values()
+                                for timesteps in states.keys())
+        arr = np.zeros((num_timesteps, num_entities))
+    else:
+        width = 1 + max(x for x, _ in entities.keys())
+        height = 1 + max(y for _, y in entities.keys())
+        arr = np.zeros((num_entities, width, height))
+
+    for i, (entity, states) in enumerate(entities.items()):
+        values = {k: v for k, v in states.items() if k.startswith(base_name)}
+        for time_step, value in values.items():
+            t = int(time_step.split(base_name)[1])
+            if not extra_dimension:
+                arr[t, i] = value
+            else:
+                arr[t, entity[0], entity[1]] = value
+    return arr    
