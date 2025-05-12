@@ -21,8 +21,8 @@ def _setup_grid(grid:Grid | np.ndarray = None,
 
 def random_1_blob(grid:Grid | np.ndarray = None,
                   size:int = 10,
-                  return_array = False,
                   key = None,
+                  #return_array = False,
                   seed = 1) -> Grid | np.ndarray:
     """
     Generates a random 1 blob (connected component) with a given size.
@@ -123,17 +123,20 @@ def split_random_blob(components: List[tuple],
     return above, below
 
 def random_2_blob(grid:Grid | np.ndarray = None,
-                  size_total:int = 10,
                   distance:int = 3,
-                  return_array = False,
                   key = None,
+                  keep_grid = False,
+                  size_total:int = 10,
                   seed = 1,
-                  return_components = False) -> Grid | np.ndarray:
+                  return_components = False,
+                  ) -> Grid | np.ndarray:
     """
     Generates a random 2 blob (connected component) with a given size.
     """
     random.seed(seed)
-    grid = random_1_blob(grid, size_total, return_array, key, seed)
+    if not keep_grid:
+        grid = random_1_blob(grid, size = size_total,
+                             key = key, seed = seed)
     component = random.choice(blobs(grid, key_name = key))
     #TODO cut the blob into two (e.g. along a horizontal or vertical line) and shift away one of the parts
     #set its original cells to 0, and set the new cells (above, below) to 1
