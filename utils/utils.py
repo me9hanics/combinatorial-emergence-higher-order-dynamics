@@ -1,5 +1,6 @@
 from typing import Dict, Callable, Any, List, Tuple #, TYPE_CHECKING
 import numpy as np
+import json
 import datetime
 from higherorder.structures.structures import Structure, Grid, Graph
 #if TYPE_CHECKING:
@@ -39,6 +40,27 @@ def save_structures(structures: List[Graph | Grid],
         json.dump(structures_dict, f, indent=4)
 
     #TODO function to turn key-value dict into key-dict{"key_name": value} dict
+
+def save_init_grids(grids: List[Grid],
+                    filename: str):
+    grids_dict = {} 
+    for i, grid in enumerate(grids):
+        grids_dict[i] = grid.get_nonzero_entities(string_keys=True)
+
+    with open(filename, 'w') as f:
+        json.dump(grids_dict, f, indent=4)
+
+def load_init_grid_dicts(filename,
+                         listify = True):
+    #TODO grid_format, etc.
+    with open(filename, 'r') as f:
+        grids_dict = json.load(f)
+
+    for i, grid in grids_dict.items():
+        grids_dict[i] = {eval(k): v for k, v in grid.items()}
+    if listify:
+        return [grid for grid in grids_dict.values()]
+    return grids_dict
 
 def dict_to_array(entities: Dict) -> np.ndarray:
     width = max(x for x, _ in entities.keys()) + 1
@@ -147,3 +169,13 @@ def blobs(structure: Structure = None,
                             break
                     components.append(component)
     return components
+
+def entities_time_array(entities: Dict,
+                        base_name: str = "t_",
+                        extra_dimension: bool = False,
+                        ):
+    """
+    Get entities in time ordering.
+    """
+#TODO time_ordering: 3D or 2D, likely flattened 2D (including time); every row is a time step., other array values are 
+    #Try for self-ref, "full grid", snippet etc.
