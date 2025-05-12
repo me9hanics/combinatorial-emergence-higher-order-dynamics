@@ -7,8 +7,7 @@ Secondary, more long term goals of this work are very extensive; e.g. how to des
 ## Setup
 
 To simply set up the environment, include this TOML file in the same directory as the repository itself (not inside the repository):
-
-<script src="https://gist.github.com/me9hanics/a00fcde722e5ebe6ac2e7e378b54e5ab.js"></script>
+[View TOML](https://gist.github.com/me9hanics/a00fcde722e5ebe6ac2e7e378b54e5ab)
 
 Then run the following command in the terminal:
 
