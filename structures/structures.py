@@ -57,6 +57,7 @@ class Structure:
         Otherwise, `t` is the timestep to check that is put in the key name,
             and the `name` is the prefix: `name` + str(t).
         """
+        #TODO redo the name and t handling - set name default to t_, and t to 0
         if t is None:
             name = name
         if isinstance(t, int):
@@ -145,13 +146,50 @@ class Structure:
                 connections_LUT[entity] = list(set(connections))
         return connections_LUT
     
-    def get_time_slice(self, key_name:str="t_0", fill_missing = False)->np.ndarray:
+    def get_time_slice(self, key_name:str="t_0",
+                       only_nonzero: bool = True,
+                       fill_missing = False)-> Dict:
         entities = self.get_entities()
-        if fill_missing:
+        if fill_missing and not only_nonzero:
             entities = {entity:values[key_name] if key_name in values else 0 for entity, values in entities.items()}
         else:
             entities = {entity:values[key_name] for entity, values in entities.items() if key_name in values}
+            if only_nonzero:
+                entities = {entity:values for entity, values in entities.items() if values}
         return entities
+
+    def get_time_slices(self, base_name:str="t_", start_timestamp:int = 0,
+                        end_timestamp:int = None, only_nonzero: bool = True,
+                        fill_missing = False)->Dict:
+        pass #TODO
+
+    def get_entities_states(self, base_name:str="t_", start_timestamp:int = 0,
+                        end_timestamp:int = None, only_nonzero: bool = True,
+                        fill_missing = False)->Dict:
+        """
+        Returns all time slices of the structure.
+        If only_nonzero is True, then fill_missing is ignored
+        """
+        entities = self.get_entities()
+        time_slices = {}
+        for entity, values in entities.items():
+            time_slices[entity] = {}
+            for key, value in values.items():
+                if key.startswith(base_name):
+                    time_period = int(key.split(base_name)[1])
+                    if (start_timestamp <= time_period) and (end_timestamp is None or time_period <= end_timestamp):
+                        if not only_nonzero or value != 0:
+                            time_slices[entity][key] = value
+        if fill_missing and not only_nonzero:
+            for entity, values in time_slices.items():
+                for key in range(self.initial_time_step, self.last_iterations[base_name]+1):
+                    key_name = base_name + str(key)
+                    if key_name not in values:
+                        time_slices[entity][key_name] = 0
+
+        if only_nonzero:
+            time_slices = {entity:values for entity, values in time_slices.items() if values}
+        return time_slices
 
     def get_entity_sorted_values(self, entity, base_name:str="t_"):
         """
@@ -161,6 +199,8 @@ class Structure:
             raise ValueError(f"Entity {entity} is not in the structure.")
         values = ([{key:value} for key, value in self.entities[entity].items() if key.startswith(base_name)])
         return sorted(values, key=lambda x: int(next(iter(x)).split(base_name)[1]))
+    
+    #TODO: get_entities_sorted_values
 
     def get_components_topology_representation(self, key_name:str="t_0"):
         """
