@@ -22,6 +22,10 @@ def general_rule(rule_function:Callable,
         for entity in structure.get_entities():
             if entity not in entities:
                 entities[entity] = 0
+    elif connections_LUT:
+        for entity in connections_LUT.keys():
+            if entity not in entities:
+                entities[entity] = 0
     states = rule_function(entities = entities, connections_LUT = connections_LUT,
                            structure = structure, **kwargs)
     if only_nonzero:
