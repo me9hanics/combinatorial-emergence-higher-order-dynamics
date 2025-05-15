@@ -36,8 +36,9 @@ class Model:
         self.base_name = base_name
         self.time_step = time_step
         self.initial_time_step = time_step
+        self.has_ended = False #TODO keep resetting it to False
 
-    def _setup_key_name(self, time_step=None, base_name=None):
+    def _setup_key_name(self, time_step=None, base_name=None, raise_error=True):
         if isinstance(base_name, type(None)):
             base_name = getattr(self.structure, 'key_name', {}).get('base_name', "t_")
 
@@ -46,8 +47,20 @@ class Model:
         
         key_name = base_name + str(time_step)
         if not any([key_name in v for v in self.structure.entities.values()]):
-            raise ValueError(f"Key name {key_name} not found in some structure entities.")
+            if raise_error:
+                raise ValueError(f"Key name {key_name} not found in some structure entities\
+                             - possibly not initialized, or the simulation")
+            else:
+                return None, None, None
         return key_name, base_name, time_step
+
+    def impact(self):
+        """Currently, only does Game of Life impact"""
+        active_impacts = []
+        #also: for every entity store timestep impacts, and write function to do time-aggregated impact connections LUT (T/F)
+        #also store the type of impact? 1->1, 1->0 (actives), 0->1? (ignore 0->0?)
+        #also store lack_of_impact? when changes on Z cannot be made through X w.r.t. other entities, but could be possible in general (neighbours)
+        raise NotImplementedError()
 
     def step(self, rule_function: Callable = None,
              entity_states: Dict = None,
@@ -56,8 +69,12 @@ class Model:
              only_state_change: bool = False,
              base_name: Dict = None,
              time_step: int = None,
+             store_impact: bool = False,
              ):
-        key_name, base_name, time_step = self._setup_key_name(time_step, base_name)
+        #TODO: store_impact
+        key_name, base_name, time_step = self._setup_key_name(time_step, base_name, raise_error=False)
+        if key_name is None:
+            return None
         rule_function = rule_function or self.dynamics_func
         entity_states = entity_states or {k: v[key_name] for k, v in self.structure.entities.items()}
         connections_LUT = connections_LUT or self.structure.get_entities_connections_LUT()
@@ -91,7 +108,8 @@ class Model:
                    time_step = None,
                    base_name = None,
                    only_nonzero=False,
-                   only_state_change=False):
+                   only_state_change=False,
+                   store_impact=False,):
         key_name, base_name, time_step = self._setup_key_name(time_step, base_name)
         states = {k: v[key_name] for k, v in self.structure.get_entities().items()}
         connections_LUT = self.structure.get_entities_connections_LUT()
@@ -106,7 +124,12 @@ class Model:
                         only_state_change = only_state_change,
                         base_name = base_name,
                         time_step = time_step + i,
+                        store_impact = store_impact,
                      )
+            if not states:
+                self.has_ended = True #TODO keep resetting it to False
+                break
+        self.last_simulation_step = time_step + steps
         #return self.structure.entities, self.structure.last_iterations, self.key_name
 
     def simulate_till_periodicity(self, 
@@ -114,7 +137,8 @@ class Model:
                                  base_name = None,
                                  only_nonzero = True,
                                  only_state_change = False,
-                                 max_steps=1000,):
+                                 max_steps=1000,
+                                 store_impact=False,):
         key_name, base_name, time_step = self._setup_key_name(time_step, base_name)
         states = {k: v[key_name] for k, v in self.structure.get_entities().items()}
         connections_LUT = self.structure.get_entities_connections_LUT()
@@ -134,9 +158,11 @@ class Model:
                         only_state_change = only_state_change,
                         base_name = base_name,
                         time_step = time_step + steps,
+                        store_impact = store_impact,
                      )
             states_topology = self.structure.get_components_topology_representation(entities=states,
                                                                                     only_nonzero = only_nonzero,
                                                                                     )
             steps += 1
+        self.last_simulation_step = time_step + steps
         #return states_topologies, steps, states
