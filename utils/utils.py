@@ -182,7 +182,7 @@ def get_keys_with_value(input: Dict,
         return {k: v for k, v in input.items() if v == value}
 
 def flattened_entities_order(entities: List[Tuple] = None,
-                             width_height: Tuple[int, int] = None):
+                             width_height: Tuple[int, int] = None)-> List[Tuple]:
     if entities and width_height:
         raise ValueError("Either entities or width_height should be provided, not both.")
     if entities:
@@ -212,15 +212,17 @@ def entities_time_array(entities: Dict[Tuple, Dict[str, Any]],
     num_timesteps = 1 + max(int(timesteps.split(base_name)[-1])
                                 for states in entities.values()
                                 for timesteps in states.keys())
-    #entities_in_order = list(entities.keys()) if ignore_empty #every possible entity
+    entities_in_order = flattened_entities_order(entities = entities) if ignore_empty else flattened_entities_order(width_height=width_height)
 
     if not extra_dimension:
         arr = np.zeros((num_timesteps, num_entities))
     else:
         arr = np.zeros((num_timesteps, width_height[0], width_height[1]))
 
-    for i, (entity, states) in enumerate(entities.items()):
-        entity, states = _, entities[entity]
+    for i, entity in enumerate(entities_in_order):#entities_in_order
+        if entity not in entities:
+            continue
+        states = entities[entity]
         values = {k: v for k, v in states.items() if k.startswith(base_name)}
         for time_step, value in values.items():
             t = int(time_step.split(base_name)[1])
@@ -229,5 +231,11 @@ def entities_time_array(entities: Dict[Tuple, Dict[str, Any]],
             else:
                 arr[t, entity[0], entity[1]] = value
     if return_column_names:
-        return arr, list(entities.keys())
+        if ignore_empty and not extra_dimension:
+            pass #TODO
+        elif not extra_dimension:
+            return arr, entities_in_order
+        else:
+            pass #TODO
+            return arr, entities_in_order
     return arr
