@@ -1,6 +1,7 @@
 from higherorder.structures.structures import Grid, Graph, Structure
 from .rules import general_rule
 from typing import Dict, Tuple, Any, Callable, Union
+from .impacts import general_impact
 
 class Model:
     def __init__(self, structure: Grid | Graph,
@@ -36,6 +37,7 @@ class Model:
         self.base_name = base_name
         self.time_step = time_step
         self.initial_time_step = time_step
+        self.impact = {}
         self.has_ended = False #TODO keep resetting it to False
 
     def _setup_key_name(self, time_step=None, base_name=None, raise_error=True):
@@ -54,14 +56,6 @@ class Model:
                 return None, None, None
         return key_name, base_name, time_step
 
-    def impact(self):
-        """Currently, only does Game of Life impact"""
-        active_impacts = []
-        #also: for every entity store timestep impacts, and write function to do time-aggregated impact connections LUT (T/F)
-        #also store the type of impact? 1->1, 1->0 (actives), 0->1? (ignore 0->0?)
-        #also store lack_of_impact? when changes on Z cannot be made through X w.r.t. other entities, but could be possible in general (neighbours)
-        raise NotImplementedError()
-
     def step(self, rule_function: Callable = None,
              entity_states: Dict = None,
              connections_LUT: Dict = None,
@@ -70,6 +64,7 @@ class Model:
              base_name: Dict = None,
              time_step: int = None,
              store_impact: bool = False,
+             impact_function: Callable = None,
              ):
         #TODO: store_impact
         key_name, base_name, time_step = self._setup_key_name(time_step, base_name, raise_error=False)
@@ -79,6 +74,17 @@ class Model:
         entity_states = entity_states or {k: v[key_name] for k, v in self.structure.entities.items()}
         connections_LUT = connections_LUT or self.structure.get_entities_connections_LUT()
 
+        if store_impact:
+            impacts = general_impact(impact_function=impact_function,
+                                     structure=self.structure,
+                                     field_name = None,
+                                     entities=entity_states,
+                                     connections_LUT=connections_LUT,
+                                     active_only=True,
+                                    )
+            #take dict, sorted by key
+            self.impact[key_name] = {k: v for k, v in sorted(impacts.items(), key=lambda item: item[0])}
+            
         states = general_rule(rule_function=rule_function,
                         structure=self.structure,
                         #field_name = None, #key_name,
@@ -109,7 +115,8 @@ class Model:
                    base_name = None,
                    only_nonzero=False,
                    only_state_change=False,
-                   store_impact=False,):
+                   store_impact=False,
+                   impact_function=None,):
         key_name, base_name, time_step = self._setup_key_name(time_step, base_name)
         states = {k: v[key_name] for k, v in self.structure.get_entities().items()}
         connections_LUT = self.structure.get_entities_connections_LUT()
@@ -125,6 +132,7 @@ class Model:
                         base_name = base_name,
                         time_step = time_step + i,
                         store_impact = store_impact,
+                        impact_function = impact_function
                      )
             if not states:
                 self.has_ended = True #TODO keep resetting it to False
@@ -138,7 +146,9 @@ class Model:
                                  only_nonzero = True,
                                  only_state_change = False,
                                  max_steps=1000,
-                                 store_impact=False,):
+                                 store_impact=False,
+                                 impact_function=None,
+                                 ):
         key_name, base_name, time_step = self._setup_key_name(time_step, base_name)
         states = {k: v[key_name] for k, v in self.structure.get_entities().items()}
         connections_LUT = self.structure.get_entities_connections_LUT()
@@ -159,6 +169,7 @@ class Model:
                         base_name = base_name,
                         time_step = time_step + steps,
                         store_impact = store_impact,
+                        impact_function = impact_function
                      )
             states_topology = self.structure.get_components_topology_representation(entities=states,
                                                                                     only_nonzero = only_nonzero,
