@@ -137,7 +137,7 @@ class Model:
             if not states:
                 self.has_ended = True #TODO keep resetting it to False
                 break
-        self.last_simulation_step = time_step + steps
+        self.last_simulation_step = time_step + i + 1
         #return self.structure.entities, self.structure.last_iterations, self.key_name
 
     def simulate_till_periodicity(self, 
