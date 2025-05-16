@@ -74,7 +74,7 @@ def array_to_dict(array: np.ndarray) -> Dict:
     return {(x, y): array[x, y] for x in range(array.shape[0]) for y in range(array.shape[1])}
 
 def unique_connections(connections: List,
-                           undirected = True) -> List:
+                       undirected = True) -> List:
     """
     Get unique connections from a list of connections.
     """
@@ -170,25 +170,57 @@ def blobs(structure: Structure = None,
                     components.append(component)
     return components
 
+def get_keys_with_value(input: Dict,
+                        value: Any,
+                        return_list = True) -> List|Dict:
+    """
+    Get keys of a dictionary with a specific value.
+    """
+    if return_list:
+        return [k for k, v in input.items() if v == value]
+    else:
+        return {k: v for k, v in input.items() if v == value}
+
+def flattened_entities_order(entities: List[Tuple] = None,
+                             width_height: Tuple[int, int] = None):
+    if entities and width_height:
+        raise ValueError("Either entities or width_height should be provided, not both.")
+    if entities:
+        return [(i, j) for i, j in sorted(entities, key=lambda x: (x[0], x[1]))]
+    elif width_height:
+        return [(i, j) for i in range(width_height[0]) for j in range(width_height[1])]
+
 def entities_time_array(entities: Dict[Tuple, Dict[str, Any]],
                         base_name: str = "t_",
                         extra_dimension: bool = False,
+                        return_column_names: bool = False,
+                        width_height: Tuple[int, int] = None,
+                        ignore_empty: bool = False,
                         ):
     """
     Get entities in time ordering.
+
+    ignore_empty: In the case of no extra dimension, makes the array only have as many columns as
+        inputted entities (typically the entities with non-zero values, which may be a subet of all entities).
     """
-    num_entities = len(entities)
-    if not extra_dimension:
-        num_timesteps = 1 + max(int(timesteps.split("t_")[-1])
+    if (not width_height):
+        width_height = (1 + max(x for x, _ in entities.keys()),
+                        1 + max(y for _, y in entities.keys()))
+        
+    num_entities = len(entities) if ignore_empty and not extra_dimension else width_height[0] * width_height[1]
+    #Order: (0,0), (0,1), (0,2), ... (1,0), (1,1), (1,2), ... (2,0), ...
+    num_timesteps = 1 + max(int(timesteps.split(base_name)[-1])
                                 for states in entities.values()
                                 for timesteps in states.keys())
+    #entities_in_order = list(entities.keys()) if ignore_empty #every possible entity
+
+    if not extra_dimension:
         arr = np.zeros((num_timesteps, num_entities))
     else:
-        width = 1 + max(x for x, _ in entities.keys())
-        height = 1 + max(y for _, y in entities.keys())
-        arr = np.zeros((num_entities, width, height))
+        arr = np.zeros((num_timesteps, width_height[0], width_height[1]))
 
     for i, (entity, states) in enumerate(entities.items()):
+        entity, states = _, entities[entity]
         values = {k: v for k, v in states.items() if k.startswith(base_name)}
         for time_step, value in values.items():
             t = int(time_step.split(base_name)[1])
@@ -196,4 +228,6 @@ def entities_time_array(entities: Dict[Tuple, Dict[str, Any]],
                 arr[t, i] = value
             else:
                 arr[t, entity[0], entity[1]] = value
-    return arr    
+    if return_column_names:
+        return arr, list(entities.keys())
+    return arr
