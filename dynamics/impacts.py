@@ -49,9 +49,6 @@ def game_of_life_impact(entities: Dict = None,
     if not connections_LUT:
         connections_LUT = structure.get_entities_connections_LUT()
 
-    if not active_only:
-        raise NotImplementedError("active_only = False not implemented yet")
-
     impacts = {}
     entities = {k: 0 if v <= 0 else 1 for k, v in entities.items()}
     for entity in entities.keys():
@@ -64,6 +61,7 @@ def game_of_life_impact(entities: Dict = None,
                 for neighbor in neighbors:
                     neighbor_state = entities[neighbor]
                     neighbor_other_neighbors = sum(entities[other] for other in connections_LUT[neighbor])
+                    #TODO Rethink this
                     if neighbor_state == 1 and neighbor_other_neighbors == 1:
                         impacts[(entity, neighbor)] = "nonactive_kill"
                     if neighbor_state == 1 and neighbor_other_neighbors == 3:
