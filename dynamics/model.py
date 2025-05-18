@@ -65,6 +65,7 @@ class Model:
              time_step: int = None,
              store_impact: bool = False,
              impact_function: Callable = None,
+             active_only: bool = True,
              ):
         #TODO: store_impact
         key_name, base_name, time_step = self._setup_key_name(time_step, base_name, raise_error=False)
@@ -80,7 +81,7 @@ class Model:
                                      field_name = None,
                                      entities=entity_states,
                                      connections_LUT=connections_LUT,
-                                     active_only=True,
+                                     active_only=active_only,
                                     )
             #take dict, sorted by key
             self.impact[key_name] = {k: v for k, v in sorted(impacts.items(), key=lambda item: item[0])}
@@ -116,7 +117,8 @@ class Model:
                    only_nonzero=False,
                    only_state_change=False,
                    store_impact=False,
-                   impact_function=None,):
+                   impact_function=None,
+                   active_only=True,):
         key_name, base_name, time_step = self._setup_key_name(time_step, base_name)
         states = {k: v[key_name] for k, v in self.structure.get_entities().items()}
         connections_LUT = self.structure.get_entities_connections_LUT()
@@ -132,7 +134,8 @@ class Model:
                         base_name = base_name,
                         time_step = time_step + i,
                         store_impact = store_impact,
-                        impact_function = impact_function
+                        impact_function = impact_function,
+                        active_only = active_only,
                      )
             if not states:
                 self.has_ended = True #TODO keep resetting it to False
@@ -148,6 +151,7 @@ class Model:
                                  max_steps=1000,
                                  store_impact=False,
                                  impact_function=None,
+                                 active_only=True,
                                  ):
         key_name, base_name, time_step = self._setup_key_name(time_step, base_name)
         states = {k: v[key_name] for k, v in self.structure.get_entities().items()}
@@ -169,7 +173,8 @@ class Model:
                         base_name = base_name,
                         time_step = time_step + steps,
                         store_impact = store_impact,
-                        impact_function = impact_function
+                        impact_function = impact_function,
+                        active_only = active_only,
                      )
             states_topology = self.structure.get_components_topology_representation(entities=states,
                                                                                     only_nonzero = only_nonzero,
@@ -177,3 +182,33 @@ class Model:
             steps += 1
         self.last_simulation_step = time_step + steps
         #return states_topologies, steps, states
+
+    def get_impact(self, impacts:Dict = None,
+                   timestep_name:str = None,
+                   impact_type:str = None,
+                   redundancy = False):
+        #TODO make impact_type a list
+        if impacts is None:
+            impacts = getattr(self, 'impact', None)
+        if not impacts:
+            print("No impacts stored")
+            return None
+        
+        if redundancy:
+            impacts = {t: {k: w for k, w in v.items() if "redundancy" in w}
+                       for t, v in impacts.items()}
+
+        if impact_type is not None:
+            if impact_type == 'active':
+                active_types = ["kill", "redundancy_kill", "birth", "no_birth", "redundancy_live"]
+                impacts = {t: {k: w for k, w in v.items() if w in active_types}
+                           for t, v in impacts.items()}
+            else:
+                impacts = {t: {k: w for k, w in v.items() if w == impact_type}
+                           for t, v in impacts.items()}
+
+        if timestep_name is not None:
+            impacts = impacts[timestep_name]
+        #TODO if impact_type is a string, then just return the list of such impacts
+
+        return impacts
