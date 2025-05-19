@@ -81,12 +81,14 @@ def game_of_life_impact(entities: Dict = None,
                     impacts[(entity, neighbor)] = "kill"
                 if neighbor_state == 1 and neighbor_other_live_neighbors > 3:
                     impacts[(entity, neighbor)] = "redundancy_kill"
-                if neighbor_state == 0 and neighbor_other_live_neighbors == 1:
+                if neighbor_state == 0 and neighbor_other_live_neighbors == 2:
                     impacts[(entity, neighbor)] = "birth"
                 if neighbor_state == 0 and neighbor_other_live_neighbors == 3:
                     impacts[(entity, neighbor)] = "no_birth"
                 #no "redundancy_birth"
                 if neighbor_state == 1 and neighbor_other_live_neighbors == 2:
                     impacts[(entity, neighbor)] = "redundancy_live"
+                if neighbor_state == 1 and neighbor_other_live_neighbors == 1:
+                    impacts[(entity, neighbor)] = "live"
 
     return impacts
