@@ -62,9 +62,11 @@ def load_init_grid_dicts(filename,
         return [grid for grid in grids_dict.values()]
     return grids_dict
 
-def dict_to_array(entities: Dict) -> np.ndarray:
-    width = max(x for x, _ in entities.keys()) + 1
-    height = max(y for _, y in entities.keys()) + 1
+def dict_to_array(entities: Dict, width = None, height = None) -> np.ndarray:
+    if not width:
+        width = max(x for x, _ in entities.keys()) + 1
+    if not height:
+        height = max(y for _, y in entities.keys()) + 1
     array = np.zeros((width, height))
     for (x, y), value in entities.items():
         array[x, y] = value
