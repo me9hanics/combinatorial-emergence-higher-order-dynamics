@@ -9,7 +9,7 @@ import numpy as np
 
 def plot_grid(entities, width=None, height=None,
               cmap='gray', title=None, show_values=False,
-              xlim=None, ylim=None, center=False,
+              xlim=None, ylim=None, center=False, ax=None,
               show_colorbar=False, show_ticks=False):
     """
     Plots a 2D cellular automaton grid from a dictionary of {(x, y): value}.
@@ -72,7 +72,11 @@ def plot_grid(entities, width=None, height=None,
     y0, y1 = max(0, ylim[0]), min(arr.shape[1], ylim[1])
     arr = arr[x0:x1, y0:y1]
     
-    fig, ax = plt.subplots()
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        fig = ax.figure
+
     cax = ax.imshow(arr.T, cmap=cmap, origin='lower', vmin=0, vmax=1)
     if title:
         ax.set_title(title)
@@ -96,6 +100,71 @@ def plot_grid(entities, width=None, height=None,
 
     if show_colorbar:
         fig.colorbar(cax, ax=ax)
+
+    plt.tight_layout()
+    if ax is None:
+        plt.show()
+
+def plot_grids(entities_list, widths=None, heights=None,
+               cmaps=None, titles=None, show_values_list=None,
+               xlims=None, ylims=None, centers=None,
+               show_colorbars=None, show_ticks_list=None,
+               cols=3, figsize=(12, 8)):
+    """
+    Plots multiple 2D cellular automaton grids using `plot_grid()` in a grid layout.
+    
+    Parameters:
+        entities_list: list of dicts or arrays
+        widths, heights, ... : list of corresponding parameters (or None to use defaults)
+        cols: int — number of columns in the figure grid
+        figsize: tuple — size of the entire figure
+    """
+    if not isinstance(entities_list, list):
+        entities_list = [entities_list]
+    if not isinstance(widths, list):
+        widths = [widths] * len(entities_list)
+    if not isinstance(heights, list):
+        heights = [heights] * len(entities_list)
+    if not isinstance(cmaps, list):
+        cmaps = [cmaps] * len(entities_list)
+    if not isinstance(titles, list):
+        titles = [titles] * len(entities_list)
+    if not isinstance(show_values_list, list):
+        show_values_list = [show_values_list] * len(entities_list)
+    if not isinstance(xlims, list):
+        xlims = [xlims] * len(entities_list)
+    if not isinstance(ylims, list):
+        ylims = [ylims] * len(entities_list)
+    if not isinstance(centers, list):
+        centers = [centers] * len(entities_list)
+    if not isinstance(show_colorbars, list):
+        show_colorbars = [show_colorbars] * len(entities_list)
+    if not isinstance(show_ticks_list, list):
+        show_ticks_list = [show_ticks_list] * len(entities_list)
+
+    n = len(entities_list)
+    rows = (int(np.ceil(n / cols)))
+    fig, axes = plt.subplots(rows, cols, figsize=figsize)
+    axes = np.array(axes).reshape(-1)
+
+    for i in range(n):
+        ax = axes[i]
+        plot_grid(
+            entities=entities_list[i],
+            width=widths[i] if widths else None,
+            height=heights[i] if heights else None,
+            cmap=cmaps[i] if cmaps else 'gray',
+            title=titles[i] if titles else None,
+            show_values=show_values_list[i] if show_values_list else False,
+            xlim=xlims[i] if xlims else None,
+            ylim=ylims[i] if ylims else None,
+            center=centers[i] if centers else False,
+            show_colorbar=show_colorbars[i] if show_colorbars else False,
+            show_ticks=show_ticks_list[i] if show_ticks_list else False,
+            ax=ax
+        )
+    for j in range(n, len(axes)):
+        fig.delaxes(axes[j])
 
     plt.tight_layout()
     plt.show()
