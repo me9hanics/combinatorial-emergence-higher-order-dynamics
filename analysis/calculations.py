@@ -24,3 +24,4 @@ def impact_group_ratio(impacts: dict, group: set, return_counts=False):
     if return_counts:
         return ratio, between_count, total_count
     return ratio
+
