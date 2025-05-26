@@ -23,7 +23,7 @@ def random_1_blob(grid:Grid | np.ndarray = None,
                   size:int = 10,
                   key = None,
                   #return_array = False,
-                  seed = 1) -> Grid | np.ndarray:
+                  seed = 1) -> Grid:
     """
     Generates a random 1 blob (connected component) with a given size.
     """

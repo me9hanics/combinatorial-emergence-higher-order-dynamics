@@ -94,6 +94,8 @@ class Model:
                         only_nonzero=only_nonzero,
                         only_state_change=only_state_change,
                      )
+        if not states:
+            self.has_ended = True
         previous_key_name = key_name
         key_name = base_name + str(time_step + 1)
         if only_state_change:
