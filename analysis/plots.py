@@ -1,4 +1,4 @@
-from .stats import *
+from .calculations import *
 from .info_measures import *
 import matplotlib.pyplot as plt
 import numpy as np
@@ -243,6 +243,38 @@ def plot_impact_group_ratio_over_time(model, group, timestep_names=None, return_
 
     plt.ylabel('Ratio')
     plt.title('Ratio of within-group impacts over time')
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+def plot_group_strength_over_time(model, group, timestep_names=None):
+    """
+    Plots the S/S_expected ratio of a group over time.
+
+    Args:
+        model: Model object
+        group: set of nodes
+        timestep_names: list or range of timestep keys
+    """
+    if timestep_names is None:
+        timestep_names = sorted(model.impact.keys(), key=lambda x: int(''.join(filter(str.isdigit, x))))
+    elif type(timestep_names) is tuple:
+        base_name = model.base_name
+        start_time, end_time = timestep_names
+        end_time = end_time or max(model.impact.keys(), key=lambda x: int(''.join(filter(str.isdigit, x))))
+        timestep_names = [f"{base_name}{i}" for i in range(start_time, end_time + 1)]
+
+    ratios = []
+    for t in timestep_names:
+        ratio = group_impact_strength(model.impact[t], group, return_counts=False)
+        ratios.append(ratio)
+
+    plt.figure(figsize=(8, 4))
+    plt.plot(timestep_names, ratios, marker='o', label='S / S_expected')
+    plt.xticks(rotation=45)
+    plt.xlabel('Timestep')
+    plt.ylabel('Relative Group Strength')
+    plt.title('Self-Controlling Group Strength (S / S_expected)')
     plt.legend()
     plt.tight_layout()
     plt.show()
